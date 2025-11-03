@@ -1,5 +1,6 @@
 package com.andrew.order_service.service;
 
+import com.andrew.order_service.dto.InventoryResponse;
 import com.andrew.order_service.dto.OrderLineItemsDto;
 import com.andrew.order_service.dto.OrderRequestDto;
 import com.andrew.order_service.model.Order;
@@ -8,7 +9,9 @@ import com.andrew.order_service.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +21,7 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final WebClient webClient;
 
     public void placeOrder(OrderRequestDto orderRequest) {
         Order order = new Order();
@@ -27,15 +31,34 @@ public class OrderService {
                 .map(this::mapToDto)
                 .toList();
 
-        order.setOrderLineItemsList(orderLineItems);//todo: add builder
-        orderRepository.save(order);
+        order.setOrderLineItemsList(orderLineItems);
+        List<String> skuCodes = order.getOrderLineItemsList().stream()
+                .map(OrderLineItems::getSkuCode)
+                .toList();
+
+        // Call Inventory Service, and place order if is in stock
+        InventoryResponse[] inventoryResponsesArray = webClient.get()
+                .uri("http://localhost:8082/api/inventory",
+                        uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
+                .retrieve()
+                .bodyToMono(InventoryResponse[].class)
+                .block();
+
+        boolean allProductsInStock = Arrays.stream(inventoryResponsesArray)
+                .allMatch(InventoryResponse::isInStock);
+
+        if ((inventoryResponsesArray.length>0) && allProductsInStock ) {
+            orderRepository.save(order);
+        } else {
+            throw new IllegalArgumentException("Product is not in stock, please try later");
+        }
     }
 
     private OrderLineItems mapToDto(OrderLineItemsDto orderLineItemsDto) {
-        return OrderLineItems.builder()
-                .price(orderLineItemsDto.getPrice())
-                .quantity(orderLineItemsDto.getQuantity())
-                .skuNumber(orderLineItemsDto.getSkuNumber())
-                .build();
+        OrderLineItems orderLineItems = new OrderLineItems();
+        orderLineItems.setPrice(orderLineItemsDto.getPrice());
+        orderLineItems.setQuantity(orderLineItemsDto.getQuantity());
+        orderLineItems.setSkuCode(orderLineItemsDto.getSkuCode());
+        return orderLineItems;
     }
 }
