@@ -4,10 +4,10 @@ package com.andrew.order_service.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
-@Table(name = "t_order")
+@Table(name = "t_orders")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,6 +17,7 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String orderNumber;
-    @OneToMany(cascade = CascadeType.ALL)
-    private List<OrderLineItems> orderLineItemsList;
+    private String skuCode;
+    private BigDecimal price;
+    private Integer quantity;
 }
