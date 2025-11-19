@@ -15,13 +15,8 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
 
     @Transactional(readOnly = true)
-    public List<InventoryResponse> isInStock(List<String> skuCode) {
-        return inventoryRepository.findBySkuCodeIn(skuCode).stream()
-                .map(inventory ->
-                        InventoryResponse.builder()
-                                .skuCode(inventory.getSkuCode())
-                                .isInStock(inventory.getQuantity() > 0)
-                                .build()
-                ).toList();
+    public boolean isInStock(String skuCode, Integer quantity) {
+        // Find an inventory for a given skuCode where quantity >= 0
+        return inventoryRepository.existsBySkuCodeAndQuantityIsGreaterThanEqual(skuCode,quantity);
     }
 }

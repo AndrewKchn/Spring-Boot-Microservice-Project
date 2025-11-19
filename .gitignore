@@ -40,3 +40,4 @@ build/
 
 /data/
 /order-service/mysql/
+/inventory-service/mysql/
