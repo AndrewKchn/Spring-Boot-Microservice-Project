@@ -1,5 +1,6 @@
 package com.andrew.order_service.service;
 
+import com.andrew.order_service.client.InventoryClient;
 import com.andrew.order_service.dto.OrderRequest;
 import com.andrew.order_service.dto.OrderResponse;
 import com.andrew.order_service.model.Order;
@@ -14,15 +15,22 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-//    private final WebClient.Builder webClientBuilder;
+    private final InventoryClient inventoryClient;
 
     public OrderResponse placeOrder(OrderRequest orderRequest) {
-        //map order request to Order object
-        Order orderDbModel = mapToDbModel(orderRequest);
+        //Verify that order is in stock
+        boolean isProductInStock = inventoryClient.isInStock(orderRequest.skuCode(), orderRequest.quantity());
+        if (isProductInStock) {
+            //map order request to Order object
+            Order orderDbModel = mapToDbModel(orderRequest);
 
-        //save order to OrderRepository
-        Order savedOrder = orderRepository.save(orderDbModel);
-        return mapToResponse(savedOrder);
+            //save order to OrderRepository
+            return mapToResponse(orderRepository.save(orderDbModel));
+        } else {
+            throw new RuntimeException("Product with SkuCode [" + orderRequest.skuCode() + "] is not in stock");
+        }
+
+
     }
 
     private Order mapToDbModel(OrderRequest orderRequest) {
