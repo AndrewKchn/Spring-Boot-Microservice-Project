@@ -41,3 +41,4 @@ build/
 /data/
 /order-service/mysql/
 /inventory-service/mysql/
+/api-gateway/volume-data/
